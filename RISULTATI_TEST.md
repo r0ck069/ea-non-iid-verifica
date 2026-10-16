@@ -66,16 +66,18 @@ Esito: su 17 stimatori applicabili, i tre strumenti danno lo stesso valore a sei
 ## 5. Risultato finale
 
 - Minimo sui simboli, come nel programma NIST: **6.638405 bit per simbolo** (stimatore Lag).
-- Valore per bit: il programma NIST riporta H_bitstring = 0.935706 (t-Tuple). Lo script e la pagina dividono invece il minimo finale per 8 e ottengono **0.829801**. Sono due definizioni diverse: il rapporto riporta entrambe, e la soglia del verdetto si applica al valore per bit dello script e della pagina.
+- Valore per bit: il risultato finale del programma NIST è min(H_original, 8 × H_bitstring) / 8 (formula verificata nel sorgente, commit `87c104d0`, righe 484-504): **0.829801**. H_bitstring = 0.935706 (t-Tuple) è un valore intermedio. Lo script e la pagina ottengono lo stesso valore per bit, e la soglia del verdetto si applica a quello.
 - Verdetto con soglia 1,00: **NON UTILIZZABILE**. Il motivo è 0.829801 < 1,00.
 
 ## 6. Cosa significa, e cosa non significa
 
 Verificato: pagina, script e programma NIST danno gli stessi risultati su questo file.
 
-Non verificato: che 6.64 bit per simbolo sia il valore atteso per byte uniformi generati dal sistema. In una prima ipotesi avevo previsto un valore vicino a 8. Non è un dato. Il valore dipende dallo stimatore Lag, che stima la prevedibilità locale della sequenza con una predizione di quattro valori consecutivi. Prima di concludere che il valore è normale, o che indica un difetto del generatore di sistema, serve un secondo file di controllo, prodotto in modo diverso, e lo stesso confronto.
+Verificato con il secondo file di controllo (sezione 9): il minimo per simbolo di circa 6,64 si ripete su un file diverso. Nel controllo il valore deriva dal test locale del predittore MultiMCW: con N = 1.000.000 e r = 4, Plocal = 0,0100, come da tabella 3 dell'Appendice G.2 del NIST. Per il minimo Lag dell'originale non è stato verificato il valore di r.
 
-Il verdetto "non utilizzabile" è coerente con la soglia e con il file. Non dice nulla sulla qualità di una sorgente fisica.
+Lo stimatore Lag usa 128 sottopredittori, ciascuno basato su un lag da 1 a 128 (NIST SP 800-90B, §6.3.8). In una prima ipotesi avevo previsto un valore vicino a 8: non era un dato, e il calcolo sopra lo chiarisce.
+
+Non verificato: che questo comportamento sia appropriato come verdetto per una sorgente reale. Il verdetto "non utilizzabile" dipende dal test locale su byte uniformi, quindi non dice nulla sulla qualità di una sorgente fisica.
 
 ## 7. Prove non eseguite
 
@@ -89,6 +91,15 @@ Il verdetto "non utilizzabile" è coerente con la soglia e con il file. Non dice
 
 ## 8. Prossimo passo di verifica
 
-1. Un secondo file di controllo, con byte uniformi prodotti in modo diverso, per capire se il valore di 6.64 è atteso con questo stimatore.
+1. Secondo file di controllo: eseguito il 16/10/2026, vedi sezione 9.
 2. Il confronto dei tre riferimenti incorporati con il repository NIST.
 3. Analisi di un file reale di sorgente, con il confronto tra programma NIST e strumento.
+
+## 9. Secondo file di controllo (16/10/2026)
+
+- File: `test_1M_controllo.bin`, 1.000.000 byte da `/dev/urandom`, creato il 16/10/2026 alle 21:20 (ora locale del Pi) nella cartella `~/verifica-ea`. SHA-256 `0d28ea583b1b2341ed445739133695c9adcda5d16684a7557eea4c2629875f9c`.
+- Il file originale `test_1M.bin` è invariato: SHA-256 `f8656330a5c76576a4294354188d2af78ef26a9f2fd1ce402e28ab537e7bbd69`.
+- Programma NIST, stessi parametri dell'originale (`./ea_non_iid -i -v <file> 8`, nella cartella `cpp/` del repository): H_original 6.638383 (MultiMCW, valore letterale); H_bitstring 0.900478 (Compressione); minimo 6.638383; per bit 0.829798.
+- Script Python (`--bps 8`): stessi 17 valori del programma NIST a sei decimali; autotest PASS (47/47); verdetto non utilizzabile. Rapporto: `rapporto_test_1M_controllo.txt`.
+- Il minimo cambia stimatore tra i due file (Lag nell'originale, MultiMCW nel controllo), ma resta circa 6,64 in entrambi. Gli altri stimatori variano di più: per esempio LRS per simbolo da 7,871595 a 7,939199, Lag da 6,638405 a 7,910781, Compressione per bit da 0,939843 a 0,900478.
+- Nel controllo il test locale di MultiMCW dà Plocal = 0,010038 per r = 4; la tabella 3 del NIST dà 0,0100 per r = 4 con N = 1.000.000.
